@@ -503,28 +503,27 @@ Succeed even if branch already exist
     ("k" "Delete Draft"                    magit-gerrit-delete-draft)
     ("A" "Add Reviewer"                    magit-gerrit-add-reviewer)
     ("B" "Abandon Review"                  magit-gerrit-abandon-review)
+    ("D" "Download Patchset"               magit-gerrit-download-patchset)
+    ("S" "Submit Review"                   magit-gerrit-submit-review)
     ]
    ["Review"
     ("b" "Browse Review"                   magit-gerrit-browse-review)
     ("V" "Verify"                          magit-gerrit-verify-review)
     ("C" "Code Review"                     magit-gerrit-code-review)
     ("d" "View Patchset Diff"              magit-gerrit-view-patchset-diff)
-    ("D" "Download Patchset"               magit-gerrit-download-patchset)
-    ("S" "Submit Review"                   magit-gerrit-submit-review)]])
+    ]]
+  ["Other"
+   ("c" "Copy Review URL"                 magit-gerrit-copy-review-dispatch)])
 
 ;; Attach Magit Gerrit to Magit's default help popup
 ;; FIXME: "R" ==> (string-to-char magit-gerrit-popup-prefix)
 (transient-append-suffix 'magit-dispatch "z" '("R" "Gerrit" magit-gerrit-dispatch))
 
 (define-transient-command magit-gerrit-copy-review-dispatch ()
-  "Popup console for copy review to clipboard."
-  'magit-gerrit
-  ["Transient and dwim commands"
-   [("C" "url and commit message"		magit-gerrit-copy-review-url-commit-message)
-    ("c" "url only"                     magit-gerrit-copy-review-url)]])
-
-(transient-append-suffix 'magit-gerrit-dispatch "c"
-  '("c" "Copy Review" magit-gerrit-copy-review-dispatch))
+  "Popup console for copy review url to clipboard."
+  ["Copy review url"
+   [("c" "url only"                     magit-gerrit-copy-review-url)]
+   [("C" "url and commit message"		magit-gerrit-copy-review-url-commit-message)]])
 
 (defvar magit-gerrit-mode-map
   (let ((map (make-sparse-keymap)))
