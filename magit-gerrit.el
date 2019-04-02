@@ -71,8 +71,7 @@
 ;;; Code:
 
 (require 'magit)
-(if (locate-library "magit-popup")
-    (require 'magit-popup))
+(require 'transient)
 (require 'json)
 
 (eval-when-compile
@@ -492,39 +491,44 @@ Succeed even if branch already exist
 
 (defun magit-gerrit-create-branch (branch parent))
 
-(magit-define-popup magit-gerrit-popup
+;;;###autoload (autoload 'magit-gerrit-dispatch "magit-gerrit" nil t)
+(define-transient-command magit-gerrit-dispatch ()
   "Popup console for magit gerrit commands."
-  'magit-gerrit
-  :actions '((?P "Push Commit For Review"                          magit-gerrit-create-review)
-	     (?W "Push Commit For Draft Review"                    magit-gerrit-create-draft)
-	     (?p "Publish Draft Patchset"                          magit-gerrit-publish-draft)
-	     (?k "Delete Draft"                                    magit-gerrit-delete-draft)
-	     (?A "Add Reviewer"                                    magit-gerrit-add-reviewer)
-	     (?V "Verify"                                          magit-gerrit-verify-review)
-	     (?C "Code Review"                                     magit-gerrit-code-review)
-	     (?d "View Patchset Diff"                              magit-gerrit-view-patchset-diff)
-	     (?D "Download Patchset"                               magit-gerrit-download-patchset)
-	     (?S "Submit Review"                                   magit-gerrit-submit-review)
-	     (?B "Abandon Review"                                  magit-gerrit-abandon-review)
-	     (?b "Browse Review"                                   magit-gerrit-browse-review))
-  :options '((?m "Comment"                      "--message "       magit-gerrit-read-comment)))
+  ["Options"
+   ("m" "Comment"       "--message"        magit-gerrit-read-comment)]
+  [["Action"
+    ("P" "Push Commit For Review"          magit-gerrit-create-review)
+    ("W" "Push Commit For Draft Review"    magit-gerrit-create-draft)
+    ("p" "Publish Draft Patchset"          magit-gerrit-publish-draft)
+    ("k" "Delete Draft"                    magit-gerrit-delete-draft)
+    ("A" "Add Reviewer"                    magit-gerrit-add-reviewer)
+    ("B" "Abandon Review"                  magit-gerrit-abandon-review)
+    ]
+   ["Review"
+    ("b" "Browse Review"                   magit-gerrit-browse-review)
+    ("V" "Verify"                          magit-gerrit-verify-review)
+    ("C" "Code Review"                     magit-gerrit-code-review)
+    ("d" "View Patchset Diff"              magit-gerrit-view-patchset-diff)
+    ("D" "Download Patchset"               magit-gerrit-download-patchset)
+    ("S" "Submit Review"                   magit-gerrit-submit-review)]])
 
 ;; Attach Magit Gerrit to Magit's default help popup
-(magit-define-popup-action 'magit-dispatch-popup (string-to-char magit-gerrit-popup-prefix) "Gerrit"
-  'magit-gerrit-popup)
+;; FIXME: "R" ==> (string-to-char magit-gerrit-popup-prefix)
+(transient-append-suffix 'magit-dispatch "z" '("R" "Gerrit" magit-gerrit-dispatch))
 
-(magit-define-popup magit-gerrit-copy-review-popup
+(define-transient-command magit-gerrit-copy-review-dispatch ()
   "Popup console for copy review to clipboard."
   'magit-gerrit
-  :actions '((?C "url and commit message" magit-gerrit-copy-review-url-commit-message)
-             (?c "url only" magit-gerrit-copy-review-url)))
+  ["Transient and dwim commands"
+   [("C" "url and commit message"		magit-gerrit-copy-review-url-commit-message)
+    ("c" "url only"                     magit-gerrit-copy-review-url)]])
 
-(magit-define-popup-action 'magit-gerrit-popup ?c "Copy Review"
-  'magit-gerrit-copy-review-popup)
+(transient-append-suffix 'magit-gerrit-dispatch "c"
+  '("c" "Copy Review" magit-gerrit-copy-review-dispatch))
 
 (defvar magit-gerrit-mode-map
   (let ((map (make-sparse-keymap)))
-    (define-key map magit-gerrit-popup-prefix 'magit-gerrit-popup)
+    (define-key map magit-gerrit-popup-prefix 'magit-gerrit-dispatch)
     map))
 
 (define-minor-mode magit-gerrit-mode "Gerrit support for Magit"
@@ -579,7 +583,7 @@ and port is the default gerrit ssh port."
 		   (magit-gerrit-detect-ssh-creds remote-url))
 	       (string-match magit-gerrit-ssh-creds remote-url))
       ;; update keymap with prefix incase it has changed
-      (define-key magit-gerrit-mode-map magit-gerrit-popup-prefix 'magit-gerrit-popup)
+      (define-key magit-gerrit-mode-map magit-gerrit-popup-prefix 'magit-gerrit-dispatch)
       (magit-gerrit-mode t))))
 
 ;; Hack in dir-local variables that might be set for magit gerrit
