@@ -286,7 +286,7 @@ Succeed even if branch already exist
 			   magit-gerrit-remote))
 	  (magit-gerrit-process-wait))
 	(message (format "Generating Gerrit Patchset for refs %s dir %s" ref dir))
-	(magit-diff "FETCH_HEAD~1..FETCH_HEAD")))))
+	(magit-diff-range "FETCH_HEAD~1..FETCH_HEAD")))))
 
 (defun magit-gerrit-download-patchset ()
   "Download a Gerrit Review Patchset"
