@@ -347,6 +347,9 @@ Succeed even if branch already exist
 		  "--add" (read-string "Reviewer Name/Email: ")
 		  (cdr-safe (assoc 'id (magit-gerrit-review-at-point)))))
 
+(defun magit-gerrit-arguments ()
+  (transient-args 'magit-gerrit))
+
 (defun magit-gerrit-popup-args (&optional something)
   (or (magit-gerrit-arguments) (list "")))
 
