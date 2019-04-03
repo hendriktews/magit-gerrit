@@ -445,7 +445,7 @@ Succeed even if branch already exist
 
 (defun magit-gerrit-create-review ()
   (interactive)
-  (magit-gerrit-push-review 'publish))
+  (magit-gerrit-push-review 'for))
 
 (defun magit-gerrit-create-draft ()
   (interactive)
