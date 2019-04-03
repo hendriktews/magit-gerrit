@@ -492,13 +492,21 @@ Succeed even if branch already exist
   (format "\'\"%s\"\'"
 	  (read-from-minibuffer "Message: ")))
 
+(define-infix-argument magit-gerrit-message:--message ()
+  :description "Message"
+  :class 'transient-option
+  :key "-m"
+  :argument "--message"
+  :reader 'magit-gerrit-read-comment
+  )
+
 (defun magit-gerrit-create-branch (branch parent))
 
 ;;;###autoload (autoload 'magit-gerrit-dispatch "magit-gerrit" nil t)
 (define-transient-command magit-gerrit-dispatch ()
   "Popup console for magit gerrit commands."
-  ["Options"
-   ("m" "Comment"       "--message"        magit-gerrit-read-comment)]
+  ["Arguments"
+   ("-m" magit-gerrit-message:--message)]
   [["Action"
     ("P" "Push Commit For Review"          magit-gerrit-create-review)
     ("W" "Push Commit For Draft Review"    magit-gerrit-create-draft)
