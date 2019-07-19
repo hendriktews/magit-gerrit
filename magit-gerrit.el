@@ -348,7 +348,7 @@ Succeed even if branch already exist
 		  (cdr-safe (assoc 'id (magit-gerrit-review-at-point)))))
 
 (defun magit-gerrit-arguments ()
-  (transient-args 'magit-gerrit))
+  (transient-args 'magit-gerrit-dispatch))
 
 (defun magit-gerrit-popup-args (&optional something)
   (or (magit-gerrit-arguments) (list "")))
@@ -496,7 +496,7 @@ Succeed even if branch already exist
   :description "Message"
   :class 'transient-option
   :key "-m"
-  :argument "--message"
+  :argument "--message "
   :reader 'magit-gerrit-read-comment
   )
 
