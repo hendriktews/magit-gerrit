@@ -526,9 +526,6 @@ Succeed even if branch already exist
   ["Other"
    ("c" "Copy Review URL"                 magit-gerrit-copy-review-dispatch)])
 
-;; Attach Magit Gerrit to Magit's default help popup
-;; FIXME: "R" ==> (string-to-char magit-gerrit-popup-prefix)
-(transient-append-suffix 'magit-dispatch "z" '("R" "Gerrit" magit-gerrit-dispatch))
 
 (define-transient-command magit-gerrit-copy-review-dispatch ()
   "Popup console for copy review url to clipboard."
@@ -589,12 +586,26 @@ and port is the default gerrit ssh port."
 (defun magit-gerrit-check-enable ()
   (let ((remote-url (magit-gerrit-get-remote-url)))
     (when (and remote-url
-	       (or magit-gerrit-ssh-creds
-		   (magit-gerrit-detect-ssh-creds remote-url))
-	       (string-match magit-gerrit-ssh-creds remote-url))
+               (or magit-gerrit-ssh-creds
+                   (magit-gerrit-detect-ssh-creds remote-url))
+               (string-match magit-gerrit-ssh-creds remote-url))
+      (magit-gerrit-mode t))
+
+    (cond
+     (magit-gerrit-mode
       ;; update keymap with prefix incase it has changed
-      (define-key magit-gerrit-mode-map magit-gerrit-popup-prefix 'magit-gerrit-dispatch)
-      (magit-gerrit-mode t))))
+      (define-key magit-mode-map magit-gerrit-popup-prefix 'magit-gerrit-dispatch)
+
+      ;; Attach Magit Gerrit to Magit's default help popup
+      ;; FIXME: "R" ==> (string-to-char magit-gerrit-popup-prefix)
+      (transient-append-suffix 'magit-dispatch "z"
+        '("R" "Gerrit" magit-gerrit-dispatch)))
+     (t
+      ;; FIXME: how to resume magit default keybind?
+      (define-key magit-mode-map magit-gerrit-popup-prefix 'magit-file-rename)
+      ;; Dettach Magit Gerrit to Magit's default help popup
+      (transient-remove-suffix 'magit-dispatch
+        (key-description magit-gerrit-popup-prefix))))))
 
 ;; Hack in dir-local variables that might be set for magit gerrit
 (add-hook 'magit-status-mode-hook #'hack-dir-local-variables-non-file-buffer t)
