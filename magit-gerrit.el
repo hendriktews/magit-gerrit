@@ -181,11 +181,11 @@ Succeed even if branch already exist
 	 (namestr (propertize (or name "") 'face 'magit-refname))
 	 (emailstr (propertize (if email (concat "(" email ")") "")
 			       'face 'change-log-name)))
-    (format "%-12s%s %s" (concat crstr " " vrstr) namestr emailstr)))
+    (format "%-5s       %s %s" (concat crstr " " vrstr) namestr emailstr)))
 
 (defun magit-gerrit-pretty-print-review (num subj owner-name &optional draft)
   ;; window-width - two prevents long line arrow from being shown
-  (let* ((wid (- (window-width) 2))
+  (let* ((wid (- (window-width) 4))
 	 (numstr (propertize (format "%-10s" num) 'face 'magit-hash))
 	 (nlen (length numstr))
 	 (authmaxlen (/ wid 4))
