@@ -321,6 +321,7 @@ Succeed even if branch already exist
          (concat (cdr (assoc 'url jobj))
                  (if with-commit-message
                      (concat " " (car (split-string (cdr (assoc 'commitMessage jobj)) "\n" t))))))
+        (message "%s" (buffer-string))
         (clipboard-kill-region (point-min) (point-max))))))
 
 (defun magit-gerrit-copy-review-url ()
