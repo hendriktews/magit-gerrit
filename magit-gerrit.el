@@ -507,31 +507,23 @@ Succeed even if branch already exist
   "Popup console for magit gerrit commands."
   ["Arguments"
    ("-m" magit-gerrit-message:--message)]
-  [["Action"
-    ("P" "Push Commit For Review"          magit-gerrit-create-review)
-    ("W" "Push Commit For Draft Review"    magit-gerrit-create-draft)
-    ("p" "Publish Draft Patchset"          magit-gerrit-publish-draft)
-    ("k" "Delete Draft"                    magit-gerrit-delete-draft)
+  [["Actions"
     ("A" "Add Reviewer"                    magit-gerrit-add-reviewer)
     ("B" "Abandon Review"                  magit-gerrit-abandon-review)
-    ("D" "Download Patchset"               magit-gerrit-download-patchset)
+    ("k" "Delete Draft"                    magit-gerrit-delete-draft)
+    ("p" "Publish Draft Patchset"          magit-gerrit-publish-draft)
+    ("P" "Push Commit For Review"          magit-gerrit-create-review)
     ("S" "Submit Review"                   magit-gerrit-submit-review)
-    ]
+    ("W" "Push Commit For Draft Review"    magit-gerrit-create-draft)]
    ["Review"
     ("b" "Browse Review"                   magit-gerrit-browse-review)
-    ("V" "Verify"                          magit-gerrit-verify-review)
     ("C" "Code Review"                     magit-gerrit-code-review)
     ("d" "View Patchset Diff"              magit-gerrit-view-patchset-diff)
-    ]]
-  ["Other"
-   ("y" "Copy Review URL"                 magit-gerrit-copy-review-dispatch)])
-
-
-(define-transient-command magit-gerrit-copy-review-dispatch ()
-  "Popup console for copy review url to clipboard."
-  ["Copy review url"
-   [("y" "URL Only"                     magit-gerrit-copy-review-url)]
-   [("Y" "URL And Commit Message"       magit-gerrit-copy-review-url-commit-message)]])
+    ("D" "Download Patchset"               magit-gerrit-download-patchset)
+    ("V" "Verify"                          magit-gerrit-verify-review)]]
+  ["Others"
+   ("y" "Copy Review URL"                  magit-gerrit-copy-review-url)
+   ("Y" "Copy Review URL And Message"      magit-gerrit-copy-review-url-commit-message)])
 
 (defvar magit-gerrit-mode-map
   (let ((map (make-sparse-keymap)))
