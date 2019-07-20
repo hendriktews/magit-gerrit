@@ -524,14 +524,14 @@ Succeed even if branch already exist
     ("d" "View Patchset Diff"              magit-gerrit-view-patchset-diff)
     ]]
   ["Other"
-   ("c" "Copy Review URL"                 magit-gerrit-copy-review-dispatch)])
+   ("y" "Copy Review URL"                 magit-gerrit-copy-review-dispatch)])
 
 
 (define-transient-command magit-gerrit-copy-review-dispatch ()
   "Popup console for copy review url to clipboard."
   ["Copy review url"
-   [("c" "url only"                     magit-gerrit-copy-review-url)]
-   [("C" "url and commit message"		magit-gerrit-copy-review-url-commit-message)]])
+   [("y" "URL Only"                     magit-gerrit-copy-review-url)]
+   [("Y" "URL And Commit Message"       magit-gerrit-copy-review-url-commit-message)]])
 
 (defvar magit-gerrit-mode-map
   (let ((map (make-sparse-keymap)))
