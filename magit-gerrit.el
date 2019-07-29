@@ -389,16 +389,14 @@ Succeed even if branch already exist
   "Submit a Gerrit Code Review"
   ;; "ssh -x -p 29418 user@gerrit gerrit review REVISION  -- --project PRJ --submit "
   (interactive (magit-gerrit-popup-args))
-  (gerrit-ssh-cmd "review"
-		  (cdr-safe (assoc
-			     'revision
-			     (cdr-safe (assoc 'currentPatchSet
-					      (magit-gerrit-review-at-point)))))
-		  "--project"
-		  (magit-gerrit-get-project)
-		  "--submit"
-		  args)
-  (magit-fetch-from-upstream ""))
+  (let ((prj (magit-gerrit-get-project))
+    (rev (cdr-safe (assoc
+		            'revision
+		            (cdr-safe (assoc 'currentPatchSet
+				                     (magit-gerrit-review-at-point)))))))
+    (gerrit-review-submit prj rev args)
+    (magit-fetch-all-no-prune)
+    (magit-refresh)))
 
 (defun magit-gerrit-push-review (status)
   (let* ((branch (or (magit-get-current-branch)
