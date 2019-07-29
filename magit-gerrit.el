@@ -152,8 +152,16 @@
      (concat (match-string 1 sstr)
 	     (match-string 2 sstr)))))
 
+(defun magit-gerrit-string-real-length (s)
+  (if (multibyte-string-p s)
+      (progn
+        (setq mm (- (string-bytes s) (length s)))
+        (setq n (- (length s) (/ mm 2)))
+        (+ mm n))
+    (length s)))
+
 (defun magit-gerrit-string-trunc (str maxlen)
-  (if (> (length str) maxlen)
+  (if (> (magit-gerrit-string-real-length str) maxlen)
       (concat (substring str 0 maxlen)
 	      "...")
     str))
@@ -185,26 +193,24 @@ Succeed even if branch already exist
 
 (defun magit-gerrit-pretty-print-review (num subj owner-name &optional draft)
   ;; window-width - two prevents long line arrow from being shown
-  (let* ((wid (- (window-width) 4))
-	 (numstr (propertize (format "%-10s" num) 'face 'magit-hash))
-	 (nlen (length numstr))
-	 (authmaxlen (/ wid 4))
-
-	 (author (propertize (magit-gerrit-string-trunc owner-name authmaxlen)
-			     'face 'magit-log-author))
-
-	 (subjmaxlen (- wid (length author) nlen 6))
-
-	 (subjstr (propertize (magit-gerrit-string-trunc subj subjmaxlen)
-			      'face
-			      (if draft
-				  'magit-signature-bad
-				'magit-signature-good)))
-	 (authsubjpadding (make-string
-			   (max 0 (- wid (+ nlen 1 (length author) (length subjstr))))
-			   ? )))
-    (format "%s%s%s%s\n"
-	    numstr subjstr authsubjpadding author)))
+  (let* ((wid (- (window-width) 2))
+         (numstr (propertize (format "%-10s" num) 'face 'magit-hash))
+         (authmaxlen (/ wid 4))
+         (author (propertize (magit-gerrit-string-trunc owner-name authmaxlen)
+                             'face 'magit-log-author))
+         (authorlen (magit-gerrit-string-real-length author))
+         (subjstr (propertize
+                   (truncate-string-to-width
+                    subj
+                    (- wid (+ (length numstr) authorlen 1))
+                    nil ?\s (make-string 1 magit-ellipsis))
+                   'face
+                   (if draft
+                       'magit-signature-bad
+                     'magit-signature-good))))
+    (format "%s%s%s\n"
+            numstr subjstr author))
+  )
 
 (defun magit-gerrit-wash-approval (approval)
   (let* ((approver (cdr-safe (assoc 'by approval)))
