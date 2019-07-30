@@ -189,27 +189,34 @@ Succeed even if branch already exist
 	 (namestr (propertize (or name "") 'face 'magit-refname))
 	 (emailstr (propertize (if email (concat "(" email ")") "")
 			       'face 'change-log-name)))
-    (format "%-5s       %s %s" (concat crstr " " vrstr) namestr emailstr)))
+    (format "  %-5s      %s %s" (concat crstr " " vrstr) namestr emailstr)))
 
-(defun magit-gerrit-pretty-print-review (num subj owner-name &optional draft)
+(defun magit-gerrit-pretty-print-review (num patchsetn subj owner-name &optional draft)
   ;; window-width - two prevents long line arrow from being shown
   (let* ((wid (- (window-width) 2))
-         (numstr (propertize (format "%-10s" num) 'face 'magit-hash))
+         (numstr (propertize (format "%-8s" num) 'face 'magit-hash))
+         (left (- wid (length numstr)))
+
+         (patchsetstr (propertize (format "%-5s" (format "[%s]" patchsetn))
+                                  'face 'magit-hash))
+         (left (- left (length patchsetstr)))
+
          (authmaxlen (/ wid 4))
          (author (propertize (magit-gerrit-string-trunc owner-name authmaxlen)
                              'face 'magit-log-author))
-         (authorlen (magit-gerrit-string-real-length author))
+         (left (- left (magit-gerrit-string-real-length author)))
+
          (subjstr (propertize
                    (truncate-string-to-width
                     subj
-                    (- wid (+ (length numstr) authorlen 1))
+                    (- left 1)
                     nil ?\s (make-string 1 magit-ellipsis))
                    'face
                    (if draft
                        'magit-signature-bad
                      'magit-signature-good))))
-    (format "%s%s%s\n"
-            numstr subjstr author))
+    (format "%s%s%s%s\n"
+            numstr patchsetstr subjstr author))
   )
 
 (defun magit-gerrit-wash-approval (approval)
@@ -240,6 +247,7 @@ Succeed even if branch already exist
 	 (owner-name (cdr-safe (assoc 'name owner)))
 	 (owner-email (cdr-safe (assoc 'email owner)))
 	 (patchsets (cdr-safe (assoc 'currentPatchSet jobj)))
+     (patchset-num (cdr-safe (assoc 'number patchsets)))
 	 ;; compare w/t since when false the value is => :json-false
 	 (isdraft (eq (cdr-safe (assoc 'isDraft patchsets)) t))
 	 (approvs (cdr-safe (if (listp patchsets)
@@ -250,7 +258,7 @@ Succeed even if branch already exist
     (when (and num subj owner-name)
       (magit-insert-section (section subj)
 	(insert (propertize
-		 (magit-gerrit-pretty-print-review num subj owner-name isdraft)
+		 (magit-gerrit-pretty-print-review num patchset-num subj owner-name isdraft)
 		 'magit-gerrit-jobj
 		 jobj))
 	(unless (oref (magit-current-section) hidden)
