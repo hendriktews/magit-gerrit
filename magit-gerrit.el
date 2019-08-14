@@ -288,6 +288,16 @@ Succeed even if branch already exist
 	      (eq (process-status magit-this-process) 'run))
     (sleep-for 0.005)))
 
+(defun magit-gerrit-fetch-patchset ()
+  "fetch a Gerrit Review Patchset"
+  (let ((jobj (magit-gerrit-review-at-point)))
+    (when jobj
+      (let ((ref (cdr (assoc 'ref (assoc 'currentPatchSet jobj)))))
+        (let* ((magit-proc (magit-git-fetch magit-gerrit-remote ref)))
+          (message (format "Waiting a git fetch from %s to complete..."
+                           magit-gerrit-remote))
+          (magit-gerrit-process-wait))))))
+
 (defun magit-gerrit-view-patchset-diff ()
   "View the Diff for a Patchset"
   (interactive)
@@ -295,10 +305,7 @@ Succeed even if branch already exist
     (when jobj
       (let ((ref (cdr (assoc 'ref (assoc 'currentPatchSet jobj))))
 	    (dir default-directory))
-	(let* ((magit-proc (magit-git-fetch magit-gerrit-remote ref)))
-	  (message (format "Waiting a git fetch from %s to complete..."
-			   magit-gerrit-remote))
-	  (magit-gerrit-process-wait))
+    (magit-gerrit-fetch-patchset)
 	(message (format "Generating Gerrit Patchset for refs %s dir %s" ref dir))
 	(magit-diff-range "FETCH_HEAD~1..FETCH_HEAD")))))
 
@@ -312,12 +319,17 @@ Succeed even if branch already exist
 	    (branch (format "review/%s/%s"
 			    (cdr (assoc 'username (assoc 'owner jobj)))
 			    (cdr (or (assoc 'topic jobj) (assoc 'number jobj))))))
-	(let* ((magit-proc (magit-git-fetch magit-gerrit-remote ref)))
-	  (message (format "Waiting a git fetch from %s to complete..."
-			   magit-gerrit-remote))
-	  (magit-gerrit-process-wait))
+    (magit-gerrit-fetch-patchset)
 	(message (format "Checking out refs %s to %s in %s" ref branch dir))
 	(magit-gerrit-create-branch-force branch "FETCH_HEAD")))))
+
+(defun magit-gerrit-cherry-pick-patchset ()
+  "Cherry-pick a Gerrit Review Patchset"
+  (interactive)
+  (let ((jobj (magit-gerrit-review-at-point)))
+    (when jobj
+      (magit-gerrit-fetch-patchset)
+      (magit--cherry-pick '("FETCH_HEAD") nil))))
 
 (defun magit-gerrit-browse-review ()
   "Browse the Gerrit Review with a browser."
@@ -533,6 +545,7 @@ Succeed even if branch already exist
     ("C" "Code Review"                     magit-gerrit-code-review)
     ("d" "View Patchset Diff"              magit-gerrit-view-patchset-diff)
     ("D" "Download Patchset"               magit-gerrit-download-patchset)
+    ("F" "Cherry-pick Patchset"            magit-gerrit-cherry-pick-patchset)
     ("V" "Verify"                          magit-gerrit-verify-review)]]
   ["Others"
    ("y" "Copy Review URL"                  magit-gerrit-copy-review-url)
