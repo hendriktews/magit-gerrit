@@ -90,7 +90,7 @@
 (defvar-local magit-gerrit-remote "origin"
   "Default remote name to use for gerrit (e.g. \"origin\", \"gerrit\")")
 
-(defcustom magit-gerrit-popup-prefix (kbd "R")
+(defcustom magit-gerrit-popup-prefix "R"
   "Key code to open magit-gerrit popup"
   :group 'magit-gerrit
   :type 'key-sequence)
@@ -602,15 +602,13 @@ and port is the default gerrit ssh port."
       (define-key magit-mode-map magit-gerrit-popup-prefix 'magit-gerrit-dispatch)
 
       ;; Attach Magit Gerrit to Magit's default help popup
-      ;; FIXME: "R" ==> (string-to-char magit-gerrit-popup-prefix)
       (transient-append-suffix 'magit-dispatch "z"
-        '("R" "Gerrit" magit-gerrit-dispatch)))
+        `(,magit-gerrit-popup-prefix "Gerrit" magit-gerrit-dispatch)))
      (t
       ;; FIXME: how to resume magit default keybind?
       (define-key magit-mode-map magit-gerrit-popup-prefix 'magit-file-rename)
       ;; Dettach Magit Gerrit to Magit's default help popup
-      (transient-remove-suffix 'magit-dispatch
-        (key-description magit-gerrit-popup-prefix))))))
+      (transient-remove-suffix 'magit-dispatch magit-gerrit-popup-prefix)))))
 
 ;; Hack in dir-local variables that might be set for magit gerrit
 (add-hook 'magit-status-mode-hook #'hack-dir-local-variables-non-file-buffer t)
