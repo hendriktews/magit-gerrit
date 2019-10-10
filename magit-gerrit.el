@@ -602,6 +602,7 @@ and port is the default gerrit ssh port."
       (message "Detected magit-gerrit-ssh-creds=%s" magit-gerrit-ssh-creds))))
 
 (defun magit-gerrit-check-enable ()
+  (defvar magit-gerrit-dispatch-is-added nil)
   (let ((remote-url (magit-gerrit-get-remote-url)))
     (when (and remote-url
                (or magit-gerrit-ssh-creds
@@ -615,12 +616,15 @@ and port is the default gerrit ssh port."
       (define-key magit-mode-map magit-gerrit-popup-prefix 'magit-gerrit-dispatch)
 
       ;; Attach Magit Gerrit to Magit's default help popup
-      (transient-append-suffix 'magit-dispatch "z"
-        `(,magit-gerrit-popup-prefix "Gerrit" magit-gerrit-dispatch)))
+      (if (not magit-gerrit-dispatch-is-added)
+          (transient-append-suffix 'magit-dispatch "z"
+            `(,magit-gerrit-popup-prefix "Gerrit" magit-gerrit-dispatch)))
+      (setq magit-gerrit-dispatch-is-added t))
      (t
       ;; FIXME: how to resume magit default keybind?
       (define-key magit-mode-map magit-gerrit-popup-prefix 'magit-file-rename)
       ;; Dettach Magit Gerrit to Magit's default help popup
+      (setq magit-gerrit-dispatch-is-added nil)
       (transient-remove-suffix 'magit-dispatch magit-gerrit-popup-prefix)))))
 
 ;; Hack in dir-local variables that might be set for magit gerrit
