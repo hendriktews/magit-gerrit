@@ -603,13 +603,16 @@ and port is the default gerrit ssh port."
 
 (defun magit-gerrit-check-enable ()
   (defvar magit-gerrit-dispatch-is-added nil)
+  (defvar magit-origin-action nil)
   (let ((remote-url (magit-gerrit-get-remote-url)))
     (when (and remote-url
                (or magit-gerrit-ssh-creds
                    (magit-gerrit-detect-ssh-creds remote-url))
                (string-match magit-gerrit-ssh-creds remote-url))
       (magit-gerrit-mode t))
-
+    (if (not magit-origin-action)
+        (setf magit-origin-action
+              (lookup-key magit-mode-map magit-gerrit-popup-prefix)))
     (cond
      (magit-gerrit-mode
       ;; update keymap with prefix incase it has changed
@@ -621,8 +624,7 @@ and port is the default gerrit ssh port."
             `(,magit-gerrit-popup-prefix "Gerrit" magit-gerrit-dispatch)))
       (setq magit-gerrit-dispatch-is-added t))
      (t
-      ;; FIXME: how to resume magit default keybind?
-      (define-key magit-mode-map magit-gerrit-popup-prefix 'magit-file-rename)
+      (define-key magit-mode-map magit-gerrit-popup-prefix magit-origin-action)
       ;; Dettach Magit Gerrit to Magit's default help popup
       (setq magit-gerrit-dispatch-is-added nil)
       (transient-remove-suffix 'magit-dispatch magit-gerrit-popup-prefix)))))
