@@ -83,6 +83,19 @@
 (defvar-local magit-gerrit-remote "origin"
   "Default remote name to use for gerrit (e.g. \"origin\", \"gerrit\")")
 
+(defcustom magit-gerrit-show-review-labels nil
+  "If t show Gerrit Review Labels as 1st row."
+  :group 'magit-gerrit
+  :type 'boolean)
+
+(defconst magit-gerrit-default-review-labels
+  (list (list "Code-Review" "CR") (list "Verified" "Ve")))
+
+(defcustom magit-gerrit-review-labels magit-gerrit-default-review-labels
+  "List of review labels including possible user defined."
+  :group 'magit-gerrit
+  :type 'list)
+
 (defcustom magit-gerrit-popup-prefix "R"
   "Key code to open magit-gerrit popup."
   :group 'magit-gerrit
@@ -180,18 +193,36 @@ Succeed even if branch already exist
          (magit-save-repository-buffers)
          (magit-run-git "checkout" "-B" branch parent))))
 
+(defun magit-gerrit-get-length-of-score-area (numitems)
+  "Get length of score area from NUMITEMS as a string."
+  (number-to-string
+   (+ 2 (* 3 (- numitems 1)))))
 
-(defun magit-gerrit-pretty-print-reviewer (name email crdone vrdone)
-  (let* ((crstr (propertize (if crdone (format "%+2d" (string-to-number crdone)) "  ")
-                            'face '(magit-diff-lines-heading
-                                    bold)))
-         (vrstr (propertize (if vrdone (format "%+2d" (string-to-number vrdone)) "  ")
-                            'face '(magit-diff-added-highlight
-                                    bold)))
-         (namestr (propertize (or name "") 'face 'magit-refname))
-         (emailstr (propertize (if email (concat "(" email ")") "")
-                               'face 'change-log-name)))
-    (format "  %-5s      %s %s" (concat crstr " " vrstr) namestr emailstr)))
+(defun magit-gerrit-get-review-line-format-string (numitems)
+  "Construct format control string based on NUMITEMS."
+  (concat "  %-" (magit-gerrit-get-length-of-score-area numitems) "s      %s %s"))
+
+(defun magit-gerrit-format-reviewer-score (score hl)
+  "Format reviewer score column if SCORE is t and apply highlight HL always."
+  (propertize (if score (format "%+2d" (string-to-number score)) "  ")
+              'face hl))
+
+(defun magit-gerrit-pretty-print-reviewer (name email &rest scorelist)
+  "Print reviewer line using NAME, EMAIL and scores from SCORELIST."
+  (let ((fieldlist nil)
+        (namestr (propertize (or name "") 'face 'magit-refname))
+        (emailstr (propertize (if email (concat "(" email ")") "")
+                              'face 'change-log-name))
+        (hliteseq (cons '(magit-diff-lines-heading bold)
+                        (make-list (- (length scorelist) 1) '(magit-diff-added-highlight bold)))))
+
+    (dolist (score scorelist)
+      (setq fieldlist (cl-adjoin (magit-gerrit-format-reviewer-score score (pop hliteseq)) fieldlist)))
+
+    (format (magit-gerrit-get-review-line-format-string (length fieldlist))
+            (string-join (nreverse fieldlist) " ")
+            namestr
+            emailstr)))
 
 (defun magit-gerrit-pretty-print-review (num patchsetn subj owner-name &optional draft)
   ;; window-width - two prevents long line arrow from being shown
@@ -220,19 +251,24 @@ Succeed even if branch already exist
     (format "%s%s%s%s\n"
             numstr patchsetstr subjstr author)))
 
+(defun magit-gerrit-match-review-labels (score type)
+  "Match SCORE to correct TYPE."
+  (let ((matchlist nil))
+    (dolist (labeltuple magit-gerrit-review-labels matchlist)
+      (push (and (string= type (car labeltuple)) score) matchlist))
+    (nreverse matchlist)))
+
 (defun magit-gerrit-wash-approval (approval)
   (let* ((approver (cdr-safe (assoc 'by approval)))
          (approvname (cdr-safe (assoc 'name approver)))
          (approvemail (cdr-safe (assoc 'email approver)))
          (type (cdr-safe (assoc 'type approval)))
-         (verified (string= type "Verified"))
-         (codereview (string= type "Code-Review"))
-         (score (cdr-safe (assoc 'value approval))))
+         (score (cdr-safe (assoc 'value approval)))
+         (paramlist (append (list approvname approvemail)
+                            (magit-gerrit-match-review-labels score type))))
 
     (magit-insert-section (section approval)
-      (insert (magit-gerrit-pretty-print-reviewer approvname approvemail
-                                                  (and codereview score)
-                                                  (and verified score))
+      (insert (apply 'magit-gerrit-pretty-print-reviewer paramlist)
               "\n"))))
 
 (defun magit-gerrit-wash-approvals (approvals)
@@ -270,11 +306,20 @@ Succeed even if branch already exist
 (defun magit-gerrit-wash-reviews (&rest _args)
   (magit-wash-sequence #'magit-gerrit-wash-review))
 
+(defun magit-gerrit-create-review-labels ()
+  "Create review labels heading."
+  (let* ((pad " ")
+         (review-labels pad))
+    (dolist (label-tuple magit-gerrit-review-labels review-labels)
+      (setq review-labels (concat review-labels " " (car (cdr label-tuple)))))))
+
 (defun magit-gerrit-section (_section title washer &rest args)
   (let ((magit-git-executable "ssh")
         (magit-git-global-arguments nil))
     (magit-insert-section (section title)
       (magit-insert-heading title)
+      (if magit-gerrit-show-review-labels
+          (insert (concat (magit-gerrit-create-review-labels) "\n")))
       (magit-git-wash washer (split-string (car args)))
       (insert "\n"))))
 
