@@ -504,8 +504,7 @@ Succeed even if branch already exist
            (branch-pub (progn
                          (string-match (rx "refs/heads" (group (one-or-more any)))
                                        branch-merge)
-                         (format "refs/%s%s/%s" status (match-string 1 branch-merge) branch))))
-
+                         (format "refs/%s%s" status (match-string 1 branch-merge)))))
 
       (when (or (null branch-remote)
                 (string= branch-remote "."))
