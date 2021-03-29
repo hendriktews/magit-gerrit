@@ -243,7 +243,10 @@ Succeed even if branch already exist
                    (truncate-string-to-width
                     subj
                     (- left 1)
-                    nil ?\s (make-string 1 magit-ellipsis))
+                    nil ?\s (if (stringp magit-ellipsis)
+                                magit-ellipsis
+                              ;; For backward compatibility.
+                              (char-to-string magit-ellipsis)))
                    'face
                    (if draft
                        'magit-signature-bad
