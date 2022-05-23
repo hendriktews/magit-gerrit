@@ -4,7 +4,7 @@
 ;;
 ;; Author: Brian Fransioli <assem@terranpro.org>
 ;; URL: https://github.com/terranpro/magit-gerrit
-;; Package-Requires: ((emacs "25.1") (magit "2.3.1"))
+;; Package-Requires: ((emacs "25.1") (magit "2.3.1") (transient "0.3.0"))
 ;;
 ;; This program is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU General Public License as
@@ -426,12 +426,9 @@ Succeed even if branch already exist
 (defun magit-gerrit-arguments ()
   (transient-args 'magit-gerrit-dispatch))
 
-(defun magit-gerrit-popup-args (&optional _something)
-  (or (magit-gerrit-arguments) (list "")))
-
 (defun magit-gerrit-verify-review (args)
   "Verify a Gerrit Review"
-  (interactive (magit-gerrit-popup-args))
+  (interactive (magit-gerrit-arguments))
 
   (let ((score (completing-read "Score: "
                                 '("-2" "-1" "0" "+1" "+2")
@@ -447,7 +444,7 @@ Succeed even if branch already exist
 
 (defun magit-gerrit-code-review (args)
   "Perform a Gerrit Code Review"
-  (interactive (magit-gerrit-popup-args))
+  (interactive (magit-gerrit-arguments))
   (let ((score (completing-read "Score: "
                                 '("-2" "-1" "0" "+1" "+2")
                                 nil t
@@ -463,7 +460,7 @@ Succeed even if branch already exist
 (defun magit-gerrit-submit-review (args)
   "Submit a Gerrit Code Review"
   ;; "ssh -x -p 29418 user@gerrit gerrit review REVISION  -- --project PRJ --submit "
-  (interactive (magit-gerrit-popup-args))
+  (interactive (magit-gerrit-arguments))
   (let ((prj (magit-gerrit-get-project))
         (rev (cdr-safe (assoc
                         'revision
@@ -614,7 +611,7 @@ Succeed even if branch already exist
                             'magit-insert-stashes t t)
     (add-hook 'magit-create-branch-command-hook
               'magit-gerrit-create-branch nil t)
-                                        ;(add-hook 'magit-pull-command-hook 'magit-gerrit-pull nil t)
+    ;;(add-hook 'magit-pull-command-hook 'magit-gerrit-pull nil t)
     (add-hook 'magit-remote-update-command-hook
               'magit-gerrit-remote-update nil t)
     (add-hook 'magit-push-command-hook
@@ -625,7 +622,7 @@ Succeed even if branch already exist
                  'magit-insert-gerrit-reviews t)
     (remove-hook 'magit-create-branch-command-hook
                  'magit-gerrit-create-branch t)
-                                        ;(remove-hook 'magit-pull-command-hook 'magit-gerrit-pull t)
+    ;;(remove-hook 'magit-pull-command-hook 'magit-gerrit-pull t)
     (remove-hook 'magit-remote-update-command-hook
                  'magit-gerrit-remote-update t)
     (remove-hook 'magit-push-command-hook
