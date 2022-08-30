@@ -365,9 +365,10 @@ Succeed even if branch already exist
     (when jobj
       (let ((ref (cdr (assoc 'ref (assoc 'currentPatchSet jobj))))
             (dir default-directory)
-            (branch (format "review/%s/%s"
+            (branch (format "review/%s/%s-%s"
                             (cdr (assoc 'username (assoc 'owner jobj)))
-                            (cdr (or (assoc 'topic jobj) (assoc 'number jobj))))))
+                            (cdr (or (assoc 'topic jobj) (assoc 'number jobj)))
+                            (cdr-safe (assoc 'number (cdr-safe (assoc 'currentPatchSet jobj)))))))
         (magit-gerrit-fetch-patchset)
         (message (format "Checking out refs %s to %s in %s" ref branch dir))
         (magit-gerrit-create-branch-force branch "FETCH_HEAD")))))
