@@ -558,7 +558,7 @@ Succeed even if branch already exist
   (format "\'\"%s\"\'"
           (read-from-minibuffer "Message: ")))
 
-(define-infix-argument magit-gerrit-message:--message ()
+(transient-define-argument magit-gerrit-message:--message ()
   :description "Message"
   :class 'transient-option
   :key "-m"
@@ -569,7 +569,7 @@ Succeed even if branch already exist
 (defun magit-gerrit-create-branch (_branch _parent))
 
 ;;;###autoload (autoload 'magit-gerrit-dispatch "magit-gerrit" nil t)
-(define-transient-command magit-gerrit-dispatch ()
+(transient-define-prefix magit-gerrit-dispatch ()
   "Popup console for magit gerrit commands."
   ["Arguments"
    ("-m" magit-gerrit-message:--message)]
