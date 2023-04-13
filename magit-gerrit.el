@@ -111,6 +111,11 @@
   :group 'magit-gerrit
   :type 'string)
 
+(defcustom magit-gerrit-ellipsis ".."
+  "String ellipsis"
+  :group 'magit-gerrit
+  :type 'string)
+
 (defun gerrit-command (cmd &rest args)
   (let ((gcmd (concat
                "-x -p 29418 "
@@ -176,12 +181,6 @@
         (+ mm n))
     (length s)))
 
-(defun magit-gerrit-string-trunc (str maxlen)
-  (if (> (magit-gerrit-string-real-length str) maxlen)
-      (concat (substring str 0 maxlen)
-              "...")
-    str))
-
 (defun magit-gerrit-create-branch-force (branch parent)
   "Switch 'HEAD' to new BRANCH at revision PARENT and update working tree.
 Fails if working tree or staging area contain uncommitted changes.
@@ -193,63 +192,140 @@ Succeed even if branch already exist
          (magit-save-repository-buffers)
          (magit-run-git "checkout" "-B" branch parent))))
 
-(defun magit-gerrit-get-length-of-score-area (numitems)
-  "Get length of score area from NUMITEMS as a string."
-  (number-to-string
-   (+ 2 (* 3 (- numitems 1)))))
+(defun magit-gerrit-format-short-timestring (seconds)
+  (let* ((years  (/ seconds 32140800))
+         (months (/ seconds 2678400))
+         (days (/ seconds 86400))
+         (hours (/ seconds 3600))
+         (minutes (/ seconds 60)))
+    (cond
+     ((> years 1) (format "%2d %s" years (if (> years 2) "years" "year")))
+     ((> months 1) (format "%2d %s" months (if (> months 2) "months" "month")))
+     ((> days 1) (format "%2d %s" days (if (> days 2) "days" "day")))
+     ((> hours 1) (format "%2d %s" hours (if (> hours 2) "hours" "hour")))
+     ((> minutes 1) (format "%2d %s" minutes (if (> minutes 2) "minutes" "minute")))
+     (t "just now"))))
 
-(defun magit-gerrit-get-review-line-format-string (numitems)
-  "Construct format control string based on NUMITEMS."
-  (concat "  %-" (magit-gerrit-get-length-of-score-area numitems) "s      %s %s"))
+(defun magit-gerrit-pretty-print-review-header ()
+  (let* ((wid (window-width))
+         ;; number
+         (numstr (propertize (format "%-13s" "Patchset")))
+         ;; ;; patchset num
+         ;; (patchsetstr (propertize (format "%-5s" "Patchset")))
+         ;; branch info
+         (branch (propertize (truncate-string-to-width
+                              "Branch"
+                              20
+                              nil ?\s magit-gerrit-ellipsis)))
+         ;; sizeinfo
+         (sizeinfo (propertize (truncate-string-to-width
+                                (format "     %s" "Delta")
+                                15
+                                nil ?\s magit-gerrit-ellipsis)))
+         ;; owner
+         (author (propertize (truncate-string-to-width
+                              (format "%s" "Owner")
+                              10
+                              nil ?\s magit-gerrit-ellipsis)))
+         ;; lastupdate
+        (lastupdate (propertize (truncate-string-to-width
+                               (format "%s" "Updated")
+                                12
+                                nil ?\s magit-gerrit-ellipsis)))
+        ;; approvals
+        (approvals-info (magit-gerrit-create-review-labels))
 
-(defun magit-gerrit-format-reviewer-score (score hl)
-  "Format reviewer score column if SCORE is t and apply highlight HL always."
-  (propertize (if score (format "%+2d" (string-to-number score)) "  ")
-              'face hl))
+        ;; subject
+        (subjstr (propertize
+                  (truncate-string-to-width
+                   (format "%s" "Subject")
+                   (- wid (length (concat numstr author
+                                          (cond
+                                           ((> wid 128) (concat branch sizeinfo lastupdate approvals-info))
+                                           ((> wid 108) (concat sizeinfo lastupdate approvals-info))
+                                           ((> wid 94)  (concat sizeinfo approvals-info))
+                                           ((> wid 80)  (concat approvals-info))
+                                           (t ""))))
+                   1)
+                  nil ?\s magit-gerrit-ellipsis)))
 
-(defun magit-gerrit-pretty-print-reviewer (name email &rest scorelist)
-  "Print reviewer line using NAME, EMAIL and scores from SCORELIST."
-  (let ((fieldlist nil)
-        (namestr (propertize (or name "") 'face 'magit-refname))
-        (emailstr (propertize (if email (concat "(" email ")") "")
-                              'face 'change-log-name))
-        (hliteseq (cons '(magit-diff-lines-heading bold)
-                        (make-list (- (length scorelist) 1) '(magit-diff-added-highlight bold)))))
+        (show-str (concat numstr subjstr author
+                          (cond
+                           ((> wid 128) (concat branch sizeinfo lastupdate approvals-info))
+                           ((> wid 108) (concat sizeinfo lastupdate approvals-info))
+                           ((> wid 94)  (concat sizeinfo approvals-info))
+                           ((> wid 80)  (concat approvals-info))
+                           (t "")))))
+    (propertize (format "%s\n" show-str) 'face 'highlight)))
 
-    (dolist (score scorelist)
-      (setq fieldlist (cl-adjoin (magit-gerrit-format-reviewer-score score (pop hliteseq)) fieldlist)))
-
-    (format (magit-gerrit-get-review-line-format-string (length fieldlist))
-            (string-join (nreverse fieldlist) " ")
-            namestr
-            emailstr)))
-
-(defun magit-gerrit-pretty-print-review (num patchsetn subj owner-name &optional draft)
+(defun magit-gerrit-pretty-print-review (num patchsetn subj owner-name br size-i size-d ctime approvals-info &optional draft)
   ;; window-width - two prevents long line arrow from being shown
-  (let* ((wid (- (window-width) 2))
+  (let* ((wid (window-width))
+         ;; number
          (numstr (propertize (format "%-8s" num) 'face 'magit-hash))
-         (left (- wid (length numstr)))
-
+         ;; patchset num
          (patchsetstr (propertize (format "%-5s" (format "[%s]" patchsetn))
                                   'face 'magit-hash))
-         (left (- left (length patchsetstr)))
-
-         (authmaxlen (/ wid 4))
-         (author (propertize (magit-gerrit-string-trunc owner-name authmaxlen)
+         ;; branch info
+         (branch (propertize (truncate-string-to-width
+                              br
+                              20
+                              nil ?\s magit-gerrit-ellipsis)
+                             'face 'magit-hash))
+         ;; sizeinfo
+         (sizeinfo (concat (propertize (truncate-string-to-width
+                                        (format "%+7s"  (concat "+" (number-to-string size-i)))
+                                        7
+                                        nil ?\s magit-gerrit-ellipsis)
+                                       'face 'diff-added)
+                           " "
+                           (propertize (truncate-string-to-width
+                                        (format "-%s" size-d)
+                                        7
+                                        nil ?\s magit-gerrit-ellipsis)
+                                       'face 'diff-removed)))
+         ;; owner
+         (author (propertize (truncate-string-to-width
+                              (format "%s" owner-name)
+                              10
+                              nil ?\s magit-gerrit-ellipsis)
                              'face 'magit-log-author))
-         (left (- left (magit-gerrit-string-real-length author)))
+         ;; lastupdate
+         (lastupdate (propertize (truncate-string-to-width
+                                  (magit-gerrit-format-short-timestring
+                                   (time-to-seconds (time-since ctime)))
+                                  12
+                                  nil ?\s magit-gerrit-ellipsis)))
+         ;; approvals
+         ;; (left (- left (* 3 (length magit-gerrit-review-labels))))
 
+         ;; subject
          (subjstr (propertize
                    (truncate-string-to-width
                     subj
-                    (- left 1)
-                    nil ?\s 'magit--ellipsis)
+                    (- wid (length (concat numstr patchsetstr
+                                           (cond
+                                            ((> wid 128) (concat branch sizeinfo lastupdate approvals-info))
+                                            ((> wid 108) (concat sizeinfo lastupdate approvals-info))
+                                            ((> wid 94)  (concat sizeinfo approvals-info))
+                                            ((> wid 80)  (concat approvals-info))
+                                            (t ""))))
+                       (magit-gerrit-string-real-length author)
+                       1)
+                    nil ?\s magit-gerrit-ellipsis)
                    'face
                    (if draft
-                       'magit-signature-bad
-                     'magit-signature-good))))
-    (format "%s%s%s%s\n"
-            numstr patchsetstr subjstr author)))
+                       'magit-dimmed
+                     'magit-filename)))
+         (show-str (concat numstr patchsetstr subjstr author
+                           (cond
+                            ((> wid 128) (concat branch sizeinfo lastupdate approvals-info))
+                            ((> wid 108) (concat sizeinfo lastupdate approvals-info))
+                            ((> wid 94)  (concat sizeinfo approvals-info))
+                            ((> wid 80)  (concat approvals-info))
+                            (t "")))))
+    (format "%s\n" show-str)
+    ))
 
 (defun magit-gerrit-match-review-labels (score type)
   "Match SCORE to correct TYPE."
@@ -258,21 +334,36 @@ Succeed even if branch already exist
       (push (and (string= type (car labeltuple)) score) matchlist))
     (nreverse matchlist)))
 
-(defun magit-gerrit-wash-approval (approval)
-  (let* ((approver (cdr-safe (assoc 'by approval)))
-         (approvname (cdr-safe (assoc 'name approver)))
-         (approvemail (cdr-safe (assoc 'email approver)))
-         (type (cdr-safe (assoc 'type approval)))
-         (score (cdr-safe (assoc 'value approval)))
-         (paramlist (append (list approvname approvemail)
-                            (magit-gerrit-match-review-labels score type))))
+(defun magit-gerrit-trans-score (type value-list)
+  (if (and value-list (length> value-list 0))
+      (let ((min-v (apply 'min value-list))
+            (max-v (apply 'max value-list))
+            (t-max-v 1)
+            (t-min-v -1))
+        (if (string= "Code-Review" type)
+            (setq t-max-v 2 t-min-v -2))
+        (cond
+         ((<= min-v t-min-v) (propertize "x" 'face 'magit-signature-bad))
+         ((>= max-v t-max-v) (propertize "√" 'face 'magit-signature-good))
+         ((> min-v 0) (propertize (format "+%d" min-v) 'face 'magit-signature-good))
+         (t (propertize (format "%d" min-v) 'face 'magit-signature-bad))))
+    " "))
 
-    (magit-insert-section (section approval)
-      (insert (apply 'magit-gerrit-pretty-print-reviewer paramlist)
-              "\n"))))
-
-(defun magit-gerrit-wash-approvals (approvals)
-  (mapc #'magit-gerrit-wash-approval approvals))
+(defun magit-gerrit-wash-approvals-oneline (approvals)
+  (let* (type-values)
+    (seq-doseq (approval approvals)
+      (let ((type (cdr (assq 'type approval)))
+            (value (string-to-number (cdr (assq 'value approval)))))
+        (push value (alist-get type type-values nil nil #'string-equal))))
+    (mapconcat
+     (lambda (elem)
+       (let* ((long (car elem))
+              (short (cadr elem))
+              (score (magit-gerrit-trans-score
+                      long (cdr (assoc long type-values)))))
+         (format "%2s" score)))
+     magit-gerrit-review-labels
+     " ")))
 
 (defun magit-gerrit-wash-review ()
   (let* ((beg (point))
@@ -280,26 +371,39 @@ Succeed even if branch already exist
          (end (point))
          (num (cdr-safe (assoc 'number jobj)))
          (subj (cdr-safe (assoc 'subject jobj)))
+         (br (cdr-safe (assoc 'branch jobj)))
          (owner (cdr-safe (assoc 'owner jobj)))
          (owner-name (cdr-safe (assoc 'name owner)))
          ;; (owner-email (cdr-safe (assoc 'email owner)))
          (patchsets (cdr-safe (assoc 'currentPatchSet jobj)))
          (patchset-num (cdr-safe (assoc 'number patchsets)))
+         (last-update (cdr-safe (assoc 'lastUpdated jobj)))
+         (size-insert (cdr-safe (assoc 'sizeInsertions patchsets)))
+         (size-delete (cdr-safe (assoc 'sizeDeletions patchsets)))
          ;; compare w/t since when false the value is => :json-false
          (isdraft (eq (cdr-safe (assoc 'isDraft patchsets)) t))
          (approvs (cdr-safe (if (listp patchsets)
                                 (assoc 'approvals patchsets)
-                              (assoc 'approvals (aref patchsets 0))))))
+                              (assoc 'approvals (aref patchsets 0)))))
+         (scoreinfo (magit-gerrit-wash-approvals-oneline approvs))
+         )
     (if (and beg end)
         (delete-region beg end))
     (when (and num subj owner-name)
       (magit-insert-section (section subj)
         (insert (propertize
-                 (magit-gerrit-pretty-print-review num patchset-num subj owner-name isdraft)
+                 (magit-gerrit-pretty-print-review num
+                                                   patchset-num
+                                                   subj
+                                                   owner-name
+                                                   br
+                                                   size-insert
+                                                   size-delete
+                                                   last-update
+                                                   scoreinfo
+                                                   isdraft)
                  'magit-gerrit-jobj
                  jobj))
-        (unless (oref (magit-current-section) hidden)
-          (magit-gerrit-wash-approvals approvs))
         (add-text-properties beg (point) (list 'magit-gerrit-jobj jobj)))
       t)))
 
@@ -308,18 +412,18 @@ Succeed even if branch already exist
 
 (defun magit-gerrit-create-review-labels ()
   "Create review labels heading."
-  (let* ((pad " ")
+  (let* ((pad "")
          (review-labels pad))
     (dolist (label-tuple magit-gerrit-review-labels review-labels)
-      (setq review-labels (concat review-labels " " (car (cdr label-tuple)))))))
+      (setq review-labels (concat review-labels (car (cdr label-tuple)) " ")))
+    (string-trim-right review-labels)))
 
 (defun magit-gerrit-section (_section title washer &rest args)
   (let ((magit-git-executable "ssh")
         (magit-git-global-arguments nil))
     (magit-insert-section (section title)
       (magit-insert-heading title)
-      (if magit-gerrit-show-review-labels
-          (insert (concat (magit-gerrit-create-review-labels) "\n")))
+      (insert (magit-gerrit-pretty-print-review-header))
       (magit-git-wash washer (split-string (car args)))
       (insert "\n"))))
 
@@ -656,6 +760,7 @@ and port is the default gerrit ssh port."
      (magit-gerrit-mode
       ;; update keymap with prefix incase it has changed
       (define-key magit-mode-map magit-gerrit-popup-prefix 'magit-gerrit-dispatch)
+      (define-key magit-mode-map [remap magit-visit-thing] 'magit-gerrit-browse-review)
 
       ;; Attach Magit Gerrit to Magit's default help popup
       (if (not magit-gerrit-dispatch-is-added)
