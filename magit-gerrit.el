@@ -4,7 +4,7 @@
 ;;
 ;; Author: Brian Fransioli <assem@terranpro.org>
 ;; URL: https://github.com/terranpro/magit-gerrit
-;; Package-Requires: ((emacs "25.1") (magit "2.3.1") (transient "0.3.0"))
+;; Package-Requires: ((emacs "25.1") (magit "3.3.0") (transient "0.3.0"))
 ;;
 ;; This program is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU General Public License as
@@ -243,10 +243,7 @@ Succeed even if branch already exist
                    (truncate-string-to-width
                     subj
                     (- left 1)
-                    nil ?\s (if (stringp magit-ellipsis)
-                                magit-ellipsis
-                              ;; For backward compatibility.
-                              (char-to-string magit-ellipsis)))
+                    nil ?\s 'magit--ellipsis)
                    'face
                    (if draft
                        'magit-signature-bad
@@ -425,7 +422,8 @@ Succeed even if branch already exist
                   (cdr-safe (assoc 'id (magit-gerrit-review-at-point)))))
 
 (defun magit-gerrit-arguments ()
-  (transient-args 'magit-gerrit-dispatch))
+  (or (transient-args 'magit-gerrit-dispatch)
+      (list "")))
 
 (defun magit-gerrit-verify-review (args)
   "Verify a Gerrit Review"
