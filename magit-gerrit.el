@@ -153,9 +153,9 @@
   (gerrit-ssh-cmd "review" "--project" prj "--submit"
                   (if msg msg "") rev))
 
-(defun gerrit-code-review (prj rev score &optional msg)
+(defun gerrit-code-review (prj rev score &optional msg notify)
   (gerrit-ssh-cmd "review" "--project" prj "--code-review" score
-                  (if msg msg "") rev))
+                  (if msg msg "") (if notify notify "") rev))
 
 (defun gerrit-review-verify (prj rev score &optional msg)
   (gerrit-ssh-cmd "review" "--project" prj "--verified" score
@@ -526,8 +526,7 @@ Succeed even if branch already exist
                   (cdr-safe (assoc 'id (magit-gerrit-review-at-point)))))
 
 (defun magit-gerrit-arguments ()
-  (or (transient-args 'magit-gerrit-dispatch)
-      (list "")))
+  (transient-args 'magit-gerrit-dispatch))
 
 (defun magit-gerrit-verify-review (args)
   "Verify a Gerrit Review"
@@ -545,7 +544,7 @@ Succeed even if branch already exist
     (gerrit-review-verify prj rev score args)
     (magit-refresh)))
 
-(defun magit-gerrit-code-review (args)
+(defun magit-gerrit-code-review (&rest args)
   "Perform a Gerrit Code Review"
   (interactive (magit-gerrit-arguments))
   (let ((score (completing-read "Score: "
@@ -557,7 +556,7 @@ Succeed even if branch already exist
                         (cdr-safe (assoc 'currentPatchSet
                                          (magit-gerrit-review-at-point))))))
         (prj (magit-gerrit-get-project)))
-    (gerrit-code-review prj rev score args)
+    (apply #'gerrit-code-review prj rev score args)
     (magit-refresh)))
 
 (defun magit-gerrit-submit-review (args)
@@ -674,7 +673,8 @@ Succeed even if branch already exist
 (transient-define-prefix magit-gerrit-dispatch ()
   "Popup console for magit gerrit commands."
   ["Arguments"
-   ("-m" magit-gerrit-message:--message)]
+   ("-m" magit-gerrit-message:--message)
+   ("-n" "no notification" "--notify NONE")]
   [["Actions"
     ("A" "Add Reviewer"                    magit-gerrit-add-reviewer)
     ("B" "Abandon Review"                  magit-gerrit-abandon-review)
