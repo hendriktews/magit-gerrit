@@ -137,7 +137,8 @@ parameter of `magit-insert-section'."
                cmd
                " "
                (mapconcat 'identity args " "))))
-    ;; (message (format "Using cmd: %s" gcmd))
+    ;; (let ((text-quoting-style 'grave))
+    ;;   (message (format "Using cmd: %s" gcmd)))
     gcmd))
 
 (defun gerrit-query (prj &optional status)
